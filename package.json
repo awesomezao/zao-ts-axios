@@ -1,0 +1,40 @@
+{
+  "name": "zao-ts-axios",
+  "version": "0.0.1",
+  "description": "用ts封装的axios",
+  "keywords": [
+    "zao",
+    "ts-axios",
+    "zao-ts-axios",
+    "typesript",
+    "ts",
+    "axios",
+    "typescript-axios"
+  ],
+  "author": {
+    "name": "zao",
+    "email": "1064216064@qq.com",
+    "url": "https://github.com/lyandzao"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lyandzao/zao-ts-axios"
+  },
+  "main": "dist/zao-ts-axios.umd.js",
+  "mudule": "dist/zao-ts-axios.es5.js",
+  "typings": "dist/types/zao-ts-axios.d-ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "start": "rollup -c rollup.config.ts -w"
+  },
+  "devDependencies": {
+    "rollup-plugin-commonjs": "^10.1.0",
+    "rollup-plugin-json": "^4.0.0",
+    "rollup-plugin-node-resolve": "^5.2.0",
+    "rollup-plugin-sourcemaps": "^0.5.0",
+    "rollup-plugin-typescript2": "^0.25.3",
+    "typescript": "^3.7.4"
+  }
+}
