@@ -20,21 +20,30 @@
     "type": "git",
     "url": "https://github.com/lyandzao/zao-ts-axios"
   },
-  "main": "dist/zao-ts-axios.umd.js",
-  "mudule": "dist/zao-ts-axios.es5.js",
-  "typings": "dist/types/zao-ts-axios.d-ts",
-  "files": [
-    "dist"
-  ],
   "scripts": {
-    "start": "rollup -c rollup.config.ts -w"
+    "start": "node scripts/start.js",
+    "build": "node scripts/build.js",
+    "test": "jest"
   },
   "devDependencies": {
-    "rollup-plugin-commonjs": "^10.1.0",
-    "rollup-plugin-json": "^4.0.0",
-    "rollup-plugin-node-resolve": "^5.2.0",
-    "rollup-plugin-sourcemaps": "^0.5.0",
-    "rollup-plugin-typescript2": "^0.25.3",
-    "typescript": "^3.7.4"
+    "@babel/core": "^7.8.0",
+    "@babel/plugin-transform-runtime": "^7.8.0",
+    "@babel/plugin-transform-typescript": "^7.8.0",
+    "@babel/preset-env": "^7.8.2",
+    "@babel/preset-typescript": "^7.8.0",
+    "@types/jest": "^24.0.25",
+    "awesome-typescript-loader": "^5.2.1",
+    "babel-loader": "^8.0.6",
+    "clean-webpack-plugin": "^3.0.0",
+    "html-webpack-plugin": "^3.2.0",
+    "terser-webpack-plugin": "^2.3.2",
+    "tslint-config-prettier": "^1.18.0",
+    "tslint-config-standard": "^9.0.0",
+    "typescript": "^3.7.4",
+    "webpack": "^4.41.5",
+    "webpack-dev-server": "^3.10.1"
+  },
+  "dependencies": {
+    "@babel/polyfill": "^7.8.0"
   }
 }
