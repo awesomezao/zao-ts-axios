@@ -1,5 +1,15 @@
-import { a } from './test2';
-import { b } from './test';
+import axios from 'axios'
 
-a();
-b();
+
+let sdata = 0
+let fdata = 0
+
+axios.get('/api').then(s => {
+  sdata = s
+  console.log(s.data)
+  
+}).catch(f => {
+  fdata=f
+})
+
+console.log(sdata);
