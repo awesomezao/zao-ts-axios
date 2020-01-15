@@ -1,93 +1,177 @@
 import {
-  AxiosAdapter,
-  AxiosInstance,
   AxiosRequestConfig,
-  CancelToken,
-  AxiosInterceptorManager,
-  AxiosPromise,
-  AxiosResponse
+  AxiosResponse,
+  AxiosStatic,
+  CancelTokenStatic,
+  AxiosError
 } from 'axios';
+import { window,IintercepterConfig, Iconfig, IinterceptionFn } from './.d';
+
 import axios from 'axios';
 
-interface IintercepterConfig {
-  requestIntercepterFn: (
-    config: AxiosRequestConfig
-  ) => AxiosRequestConfig | AxiosPromise<AxiosRequestConfig>;
-  responseIntercepterFn: (response: AxiosResponse) => AxiosPromise;
-}
-interface IinterceptionFn<T> {
-  (value: T): void;
-}
-
+// 定义了缓存类
 export default class Cache {
-  axios: AxiosInstance;
-  cache: any[];
-  config: AxiosRequestConfig & IintercepterConfig;
-  defaultConfig: any;
-  CancelToken?: CancelToken;
+  axios: AxiosStatic; // axios静态实例
+  caches: any[]; // 缓存
+  config?: AxiosRequestConfig; // 外部定义的axios配置
+  interceptorConfig: IintercepterConfig; // 外部定义的拦截器配置
+  defaultConfig: any; // 默认配置，设置了cacheMode,cache,expire
+  CancelToken?: CancelTokenStatic; // 取消请求
+
   constructor(
-    axios: AxiosInstance,
-    config: AxiosRequestConfig,
+    axios: AxiosStatic,
+    presetConfig: AxiosRequestConfig,
     interceptorConfig: IintercepterConfig
   ) {
     this.axios = axios;
-    this.cache = [];
+    this.caches = [];
     if (!this.axios) {
       throw new Error('请传入axios实例');
     }
-    this.config = { ...config, ...interceptorConfig };
+    this.interceptorConfig = interceptorConfig;
     this.defaultConfig = {
       cacheMode: 'localStorage',
       cache: false,
-      expire: 100 * 1000
+      expire: 100 * 1000,
+      ...presetConfig
     };
-    this.CancelToken = this.config.cancelToken;
+    this.CancelToken = this.axios?.CancelToken;
   }
+
   // 初始化拦截器以及设置缓存数据
   init(): void {
-    this.requestInterceptor(this.config.requestIntercepterFn);
-    this.responseInterceptor(this.config.responseIntercepterFn);
+    this.requestInterceptor(this.interceptorConfig.requestIntercepterFn);
+    this.responseInterceptor(this.interceptorConfig.responseIntercepterFn);
+    // 再页面关闭前的操作
     window.onbeforeunload = () => {
-      this.mapStorage();
+      this.clearUnusedStorage();
     };
   }
+
   // 请求拦截器
-  requestInterceptor(callback: any) {
+  requestInterceptor(callback: IinterceptionFn<AxiosRequestConfig>) {
     this.axios.interceptors.request.use(
+      // 这里的config是用户请求发过来的config
       async (config: AxiosRequestConfig): Promise<AxiosRequestConfig> => {
-        let newConfig = callback && (await callback(config));
-        let _config = { ...newConfig, ...this.defaultConfig };
-        let { url, data, params, cacheMode, cache, expire } = _config;
+        // newConfig为经过拦截器包装后的config
+        let newConfig: AxiosRequestConfig =
+          callback && (await callback(config));
+        config = {
+          ...this.defaultConfig,
+          ...newConfig
+        };
+        let { url, data, params, cacheMode, cache, expire } = config as Iconfig;
         if (cache === true) {
           let getKey = data
             ? `${url}?cacheParams=${data}`
             : `${url}?cacheParams=${params}`;
+
           let obj = this.getStorage(cacheMode, getKey);
+
           if (obj) {
             let currentTime: number = this.getExpireTime();
-            let source = this.CancelToken
-            
+            let source = this.CancelToken?.source();
+            config.cancelToken = source?.token;
+            if (currentTime - obj.expire < expire) {
+              source?.cancel(obj);
+            } else {
+              this.removeStorage(cacheMode, url as string);
+            }
           }
+        } else {
+          this.clearStorage(url as string);
         }
-        return Promise;
+        return Promise.resolve(config);
+      },
+      (err: AxiosError) => Promise.reject(err)
+    );
+  }
+
+  // 响应拦截器
+  responseInterceptor(callback: IinterceptionFn<AxiosResponse>): any {
+    this.axios.interceptors.response.use(
+      async (response: AxiosResponse): Promise<AxiosResponse> => {
+        let newResponse: AxiosResponse = callback && (await callback(response));
+        response = newResponse || response;
+        console.log(response);
+
+        if (response.status !== 200) {
+          return response.data;
+        }
+        let {
+          url,
+          data,
+          params,
+          cache,
+          cacheMode
+        } = response.config as Iconfig;
+        console.log(cache);
+
+        if (cache === true) {
+          let obj = {
+            expire: this.getExpireTime(),
+            params,
+            data,
+            result: data
+          };
+          let setKey = data
+            ? `${url}?cacheParams=${data}`
+            : `${url}?cacheParams=${params}`;
+
+          this.caches.push(setKey);
+          this.setStorage(cacheMode, setKey, obj);
+        }
+        return response.data;
+      },
+      (err: AxiosError) => {
+        if (this.axios.isCancel(err)) {
+          return Promise.resolve(err.message);
+        }
+        return Promise.reject(err);
       }
     );
   }
-  // 响应拦截器
-  responseInterceptor(callback: AxiosInterceptorManager<AxiosResponse>): any {}
+
   // 设置缓存
-  setStorage(mode: string = 'sessionStorage', key: string) {}
+  setStorage(cacheMode: string = 'sessionStorage', key: string, obj: any) {
+    (window[cacheMode] as Storage).setItem(key, JSON.stringify(obj));
+  }
+
   // 获取缓存
-  getStorage(cacheMode: string, getKey: string): any {}
+  getStorage(cacheMode: string, key: string): any {
+    let data: any = (window[cacheMode] as Storage).getItem(key);
+    return JSON.parse(data);
+  }
+
   // 清除缓存
-  removeStorage(mode: string = 'sessionStorage', key: string) {}
+  removeStorage(cacheMode: string = 'cacheStorage', key: string) {
+    (window[cacheMode] as Storage).removeItem(key);
+  }
+
   // 清除未用到得缓存
-  clearUnusedStorage() {}
+  clearUnusedStorage() {
+    let length = window.localStorage.length;
+    if (length) {
+      for (let i = 0; i < length; i++) {
+        let key = window.localStorage.key(i);
+        if (!this.caches.includes(key) && key.includes('?cacheParams=')) {
+          window.localStorage.removeItem(key);
+        }
+      }
+    }
+  }
+
   // 清空缓存
-  clearStorage(key: string) {}
+  clearStorage(key: string) {
+    if (window.localStorage.getItem(key)) {
+      window.localStorage.removeItem(key);
+    } else {
+      window.sessionStorage.removeItem(key);
+    }
+  }
 
   // 获取过期时间
   getExpireTime() {
-    return new Date().getTime()
+    return new Date().getTime();
   }
 }

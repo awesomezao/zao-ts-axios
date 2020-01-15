@@ -1,15 +1,23 @@
-import axios from 'axios'
-import qs from 'qs'
+import axios from './axios';
+import Cache from './cache';
+import Config from './config';
+import qs from 'qs';
+import { AxiosRequestConfig } from 'axios';
 
-
-
-process.env.BASE_URL = 'http://localhost:3001/api';
-const baseUrl:string=process.env.BASE_URL
-
-axios.defaults.baseURL = baseUrl
-axios.defaults.headers.post['Content-Type'] = 'application/x-www-form-urlencoded;charset=UTF-8'
-axios.defaults.timeout = 50000
-
-
-
-
+export const get = (url: string, data?: any, extend = { cache: true }) => {
+  let defaultConfig = {
+    url,
+    method: 'GET',
+    params: data
+  };
+  let config = { ...defaultConfig, ...extend };
+  return new Promise((resolve, reject) => {
+    axios(config as AxiosRequestConfig).then(
+      res => {
+      resolve(res)  
+      }
+    ).catch(err => {
+      reject(err)
+    })
+  })
+};

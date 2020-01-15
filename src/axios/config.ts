@@ -1,12 +1,7 @@
+import { AxiosRequestConfig } from "axios";
+
 process.env.BASE_URL = 'http://localhost:3001/api';
 
-interface Iconfig{
-  url: string,
-  method: string,
-  baseURL: string,
+const config:AxiosRequestConfig = {
 }
-
-// export const config:Iconfig = {
-//   url: process.env.BASE_URL,
-  
-// }
+export default  config 
