@@ -5,7 +5,29 @@ import {
   CancelTokenStatic,
   AxiosError
 } from 'axios';
-import { window,IintercepterConfig, Iconfig, IinterceptionFn } from './.d';
+export declare var window: {
+  [key: string]: any; // missing index defintion
+  prototype: Window;
+  new (): Window;
+};
+
+// 定义Iconfig,包括了cacheMode,cache,expire
+export declare interface Iconfig extends AxiosRequestConfig {
+  cacheMode: string;
+  cache: boolean;
+  expire: number;
+}
+
+// 定义了两个拦截器的配置
+export declare interface IintercepterConfig extends AxiosRequestConfig {
+  requestIntercepterFn: IinterceptionFn<AxiosRequestConfig>;
+  responseIntercepterFn: IinterceptionFn<AxiosResponse>;
+}
+
+// 定义了拦截器函数
+export declare interface IinterceptionFn<T> {
+  (value: T): T | Promise<T>;
+}
 
 import axios from 'axios';
 
@@ -63,7 +85,7 @@ export default class Cache {
         let { url, data, params, cacheMode, cache, expire } = config as Iconfig;
         if (cache === true) {
           let getKey = data
-            ? `${url}?cacheParams=${data}`
+            ? `${url}?cacheParams=${JSON.stringify(data)}`
             : `${url}?cacheParams=${params}`;
 
           let obj = this.getStorage(cacheMode, getKey);
@@ -93,8 +115,6 @@ export default class Cache {
       async (response: AxiosResponse): Promise<AxiosResponse> => {
         let newResponse: AxiosResponse = callback && (await callback(response));
         response = newResponse || response;
-        console.log(response);
-
         if (response.status !== 200) {
           return response.data;
         }
@@ -105,14 +125,12 @@ export default class Cache {
           cache,
           cacheMode
         } = response.config as Iconfig;
-        console.log(cache);
-
         if (cache === true) {
           let obj = {
             expire: this.getExpireTime(),
             params,
             data,
-            result: data
+            result: response.data
           };
           let setKey = data
             ? `${url}?cacheParams=${data}`
@@ -121,7 +139,7 @@ export default class Cache {
           this.caches.push(setKey);
           this.setStorage(cacheMode, setKey, obj);
         }
-        return response.data;
+        return response;
       },
       (err: AxiosError) => {
         if (this.axios.isCancel(err)) {
