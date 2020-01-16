@@ -26,7 +26,7 @@ export declare interface IintercepterConfig extends AxiosRequestConfig {
 
 // 定义了拦截器函数
 export declare interface IinterceptionFn<T> {
-  (value: T): T | Promise<T>;
+  (value: T): T | Promise<T> | any;
 }
 
 import axios from 'axios';
@@ -113,7 +113,8 @@ export default class Cache {
   responseInterceptor(callback: IinterceptionFn<AxiosResponse>): any {
     this.axios.interceptors.response.use(
       async (response: AxiosResponse): Promise<AxiosResponse> => {
-        let newResponse: AxiosResponse = callback && (await callback(response));
+        let newResponse: AxiosResponse =
+          callback && (await callback(response).response);
         response = newResponse || response;
         if (response.status !== 200) {
           return response.data;
@@ -144,8 +145,10 @@ export default class Cache {
       (err: AxiosError) => {
         if (this.axios.isCancel(err)) {
           return Promise.resolve(err.message);
+        } else {
+          callback && callback(err.response as AxiosResponse).errHandle(err);
+          return Promise.reject(err);
         }
-        return Promise.reject(err);
       }
     );
   }

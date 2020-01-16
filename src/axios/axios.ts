@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 import Cache from './cache';
 
 const baseUrl: string =
@@ -11,13 +11,22 @@ axios.defaults.headers.post['Content-Type'] =
 axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
 axios.defaults.timeout = 50000;
 
-let cache = new Cache(axios,{}, {
-  requestIntercepterFn: (config: any) => {
-    return Promise.resolve(config);
-  },
-  responseIntercepterFn: (response: any) => {
-    return Promise.resolve(response);
+let cache = new Cache(
+  axios,
+  {},
+  {
+    requestIntercepterFn: (config: any) => {
+      return Promise.resolve(config);
+    },
+    responseIntercepterFn: (response: any) => {
+      return {
+        response: Promise.resolve(response),
+        errHandle: (err: AxiosError) => {
+          console.log('errHandle')
+        }
+      };
+    }
   }
-});
+);
 cache.init();
 export default axios;

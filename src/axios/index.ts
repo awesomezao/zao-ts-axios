@@ -22,7 +22,7 @@ export const get = (
   let config = { ...defaultConfig, ...extend };
   return new Promise((resolve, reject) => {
     axios(config as AxiosRequestConfig)
-      .then((res:any) => {
+      .then((res: any) => {
         if (res.status) {
           resolve(res.data);
         } else {
