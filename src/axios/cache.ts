@@ -11,8 +11,8 @@ export declare var window: {
   new (): Window;
 };
 
-// 定义Iconfig,包括了cacheMode,cache,expire
-export declare interface Iconfig extends AxiosRequestConfig {
+// 定义IcacheConfig,包括了cacheMode,cache,expire
+export declare interface IcacheConfig extends AxiosRequestConfig {
   cacheMode: string;
   cache: boolean;
   expire: number;
@@ -20,7 +20,7 @@ export declare interface Iconfig extends AxiosRequestConfig {
 
 // 定义了两个拦截器的配置
 export declare interface IintercepterConfig extends AxiosRequestConfig {
-  requestIntercepterFn: IinterceptionFn<AxiosRequestConfig>;
+  requestIntercepterFn: IinterceptionFn<IcacheConfig>;
   responseIntercepterFn: IinterceptionFn<AxiosResponse>;
 }
 
@@ -28,8 +28,6 @@ export declare interface IintercepterConfig extends AxiosRequestConfig {
 export declare interface IinterceptionFn<T> {
   (value: T): T | Promise<T> | any;
 }
-
-import axios from 'axios';
 
 // 定义了缓存类
 export default class Cache {
@@ -71,18 +69,25 @@ export default class Cache {
   }
 
   // 请求拦截器
-  requestInterceptor(callback: IinterceptionFn<AxiosRequestConfig>) {
+  requestInterceptor(callback: IinterceptionFn<IcacheConfig>) {
     this.axios.interceptors.request.use(
       // 这里的config是用户请求发过来的config
       async (config: AxiosRequestConfig): Promise<AxiosRequestConfig> => {
         // newConfig为经过拦截器包装后的config
         let newConfig: AxiosRequestConfig =
-          callback && (await callback(config));
+          callback && (await callback(config as IcacheConfig));
         config = {
           ...this.defaultConfig,
           ...newConfig
         };
-        let { url, data, params, cacheMode, cache, expire } = config as Iconfig;
+        let {
+          url,
+          data,
+          params,
+          cacheMode,
+          cache,
+          expire
+        } = config as IcacheConfig;
         if (cache === true) {
           let getKey = data
             ? `${url}?cacheParams=${JSON.stringify(data)}`
@@ -112,9 +117,9 @@ export default class Cache {
   // 响应拦截器
   responseInterceptor(callback: IinterceptionFn<AxiosResponse>): any {
     this.axios.interceptors.response.use(
-      async (response: AxiosResponse): Promise<AxiosResponse> => {
+      async (response: AxiosResponse): Promise<AxiosResponse> => { 
         let newResponse: AxiosResponse =
-          callback && (await callback(response).response);
+          callback && (await callback(response));
         response = newResponse || response;
         if (response.status !== 200) {
           return response.data;
@@ -125,7 +130,7 @@ export default class Cache {
           params,
           cache,
           cacheMode
-        } = response.config as Iconfig;
+        } = response.config as IcacheConfig;
         if (cache === true) {
           let obj = {
             expire: this.getExpireTime(),
@@ -140,15 +145,13 @@ export default class Cache {
           this.caches.push(setKey);
           this.setStorage(cacheMode, setKey, obj);
         }
-        return response;
+        return Promise.resolve(response);
       },
       (err: AxiosError) => {
         if (this.axios.isCancel(err)) {
           return Promise.resolve(err.message);
-        } else {
-          callback && callback(err.response as AxiosResponse).errHandle(err);
-          return Promise.reject(err);
         }
+        return Promise.reject(err);
       }
     );
   }

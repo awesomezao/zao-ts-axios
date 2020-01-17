@@ -8,6 +8,8 @@ mockRouter.get('/', async (ctx) => {
   ctx.body = testData
 });
 mockRouter.post('/', async (ctx) => {
+  console.log(ctx)
+  
   ctx.body = testData
 });
 
